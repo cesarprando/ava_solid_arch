@@ -162,7 +162,66 @@ module.exports = class PetController {
 
 
     static async updatePet(req, res) {
+        const id = req.params.id
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(422).json({
+                message: 'ID inválido!'
+            })
+            return
+        } 
+
+        const pet = await Pet.findById(id)
+
+        if (!pet) {
+            res.status(404).json({
+                message: 'Pet não encontrado!'
+            })
+            return
+        }
+
+        const token = getToken(req)
+        const user = await getUserByToken(token)
+
+        if (pet.user._id.toString() !== user._id.toString()) {
+            res.status(422).json({
+                message: 'Acesso negado!'
+            })
+            return
+        }
+
+        const updatedData = {}
+
+        if (req.body.name) {
+            updatedData.name = req.body.name
+        }
+
+        if (req.body.age) {
+            updatedData.age = req.body.age
+        }
+
+        if (req.body.weight) {
+            updatedData.weight = req.body.weight
+        }
+
+        if (req.body.color) {
+            updatedData.color = req.body.color
+        }
+
+        if (req.files && req.files.length > 0) {
+
+            updatedData.images = []
+
+            req.files.forEach((image) => {
+                updatedData.images.push(image.filename)
+            })
+        }
+
+        await Pet.findByIdAndUpdate(id, updatedData)
+
+        res.status(200).json({
+            message: 'Pet atualizado com sucesso!'
+        })
     }
 
     static async schedule(req, res) {
